@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8" />
+<textarea id="t" style="width:100%;height:90vh"></textarea>
+
+<script type="module">
+  import * as Y from "https://esm.sh/yjs";
+  import { WebrtcProvider } from "https://esm.sh/y-webrtc";
+  import { SimplePool, generateSecretKey, getPublicKey } from "https://esm.sh/nostr-tools";
+
+  const room = location.hash.slice(1) || (location.hash = Math.random().toString(36).slice(2));
+  const doc = new Y.Doc();
+  const ytext = doc.getText("t");
+  new WebrtcProvider(room, doc); // networking
+
+  const ta = document.getElementById("t");
+  ytext.observe(() => ta.value = ytext.toString());
+  ta.oninput = () => ytext.delete(0, ytext.length) || ytext.insert(0, ta.value);
+
+  // Nostr: "ik ben er"
+  const pool = new SimplePool();
+  const sk = generateSecretKey();
+  const pk = getPublicKey(sk);
+  pool.publish(
+    ["wss://relay.damus.io"],
+    { kind: 1, pubkey: pk, created_at: Math.floor(Date.now()/1000),
+      tags: [["room", room]], content: "hoi ik ben er" }
+  );
+</script>
