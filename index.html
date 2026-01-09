@@ -1,28 +1,27 @@
+<!-- demo.html: textarea synced via yStorage -->
 <!doctype html>
 <meta charset="utf-8" />
 <textarea id="t" style="width:100%;height:90vh"></textarea>
 
 <script type="module">
-  import * as Y from "https://esm.sh/yjs";
-  import { WebrtcProvider } from "https://esm.sh/y-webrtc";
-  import { SimplePool, generateSecretKey, getPublicKey } from "https://esm.sh/nostr-tools";
+  import { createYStorage } from "./ystorage-trystero.mjs";
 
-  const room = location.hash.slice(1) || (location.hash = Math.random().toString(36).slice(2));
-  const doc = new Y.Doc();
-  const ytext = doc.getText("t");
-  new WebrtcProvider(room, doc); // networking
+  const roomId = location.href;
+  const yStorage = createYStorage({
+    appId: "poc-peer-storage",  // must be stable across your app :contentReference[oaicite:6]{index=6}
+    roomId,
+    // relayUrls: ["wss://relay.damus.io","wss://nos.lol"], // optional
+    // password: "shared-secret", // optional
+  });
 
   const ta = document.getElementById("t");
-  ytext.observe(() => ta.value = ytext.toString());
-  ta.oninput = () => ytext.delete(0, ytext.length) || ytext.insert(0, ta.value);
+  ta.value = yStorage.getItem("text") ?? "";
 
-  // Nostr: "ik ben er"
-  const pool = new SimplePool();
-  const sk = generateSecretKey();
-  const pk = getPublicKey(sk);
-  pool.publish(
-    ["wss://relay.damus.io"],
-    { kind: 1, pubkey: pk, created_at: Math.floor(Date.now()/1000),
-      tags: [["room", room]], content: "hoi ik ben er" }
-  );
+  ta.addEventListener("input", () => yStorage.setItem("text", ta.value));
+
+  yStorage.addEventListener("storage", (e) => {
+    if (e.detail.key !== "text") return;
+    const v = e.detail.newValue ?? "";
+    if (ta.value !== v) ta.value = v;
+  });
 </script>
